@@ -2,7 +2,9 @@ package com.meetchance.permission.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.meetchance.permission.entity.Permission;
+import com.meetchance.permission.entity.User;
 import com.meetchance.permission.mapper.PermissionMapper;
+import com.meetchance.permission.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 public class PermissionService {
 
     private final PermissionMapper permissionMapper;
+    private final UserMapper userMapper;
 
     public List<Permission> list(Long serviceId, String permissionType) {
         LambdaQueryWrapper<Permission> wrapper = new LambdaQueryWrapper<>();
@@ -27,9 +30,30 @@ public class PermissionService {
         return permissionMapper.selectList(wrapper);
     }
 
+    public List<Permission> listByUser(Long userId, Long serviceId, String permissionType) {
+        User user = userMapper.selectById(userId);
+        if (user != null && user.getIsAdmin() != null && user.getIsAdmin() == 1) {
+            return list(serviceId, permissionType);
+        }
+        List<Permission> userPermissions = permissionMapper.selectPermissionsByUserId(userId);
+        return userPermissions.stream()
+                .filter(p -> (serviceId == null || p.getServiceId().equals(serviceId))
+                        && (!StringUtils.hasText(permissionType) || p.getPermissionType().equals(permissionType)))
+                .sorted((p1, p2) -> {
+                    int levelCompare = Integer.compare(p1.getLevel(), p2.getLevel());
+                    return levelCompare != 0 ? levelCompare : Integer.compare(p1.getSort(), p2.getSort());
+                })
+                .collect(Collectors.toList());
+    }
+
     public List<Permission> tree(Long serviceId, String permissionType) {
         List<Permission> allPermissions = list(serviceId, permissionType);
         return buildTree(allPermissions);
+    }
+
+    public List<Permission> treeByUser(Long userId, Long serviceId, String permissionType) {
+        List<Permission> permissions = listByUser(userId, serviceId, permissionType);
+        return buildTree(permissions);
     }
 
     private List<Permission> buildTree(List<Permission> permissions) {

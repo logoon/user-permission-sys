@@ -44,6 +44,11 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="serviceId" label="关联服务" width="150">
+        <template #default="{ row }">
+          <span>{{ getServiceName(row.serviceId) }}</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="description" label="描述" show-overflow-tooltip />
       <el-table-column prop="status" label="状态" width="100">
         <template #default="{ row }">
@@ -80,6 +85,16 @@
         <el-form-item label="角色名称" prop="roleName">
           <el-input v-model="form.roleName" placeholder="请输入角色名称" />
         </el-form-item>
+        <el-form-item label="关联服务" prop="serviceId">
+          <el-select v-model="form.serviceId" placeholder="请选择关联服务" style="width: 100%" :disabled="isEdit">
+            <el-option
+              v-for="service in serviceList"
+              :key="service.id"
+              :label="service.serviceName"
+              :value="service.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="角色类型" prop="roleType">
           <el-radio-group v-model="form.roleType">
             <el-radio :value="'function'">功能角色</el-radio>
@@ -105,21 +120,8 @@
     </el-dialog>
     <el-dialog v-model="permissionDialogVisible" title="分配权限" width="600px" destroy-on-close>
       <el-form label-width="100px">
-        <el-form-item label="服务过滤">
-          <el-select
-            v-model="filterServiceId"
-            placeholder="请选择服务"
-            clearable
-            style="width: 200px"
-            @change="filterPermissions"
-          >
-            <el-option
-              v-for="service in serviceList"
-              :key="service.id"
-              :label="service.serviceName"
-              :value="service.id"
-            />
-          </el-select>
+        <el-form-item label="关联服务">
+          <el-tag>{{ currentRoleServiceName }}</el-tag>
         </el-form-item>
         <el-form-item label="权限类型">
           <el-select
@@ -161,8 +163,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getRolePage, createRole, updateRole, deleteRole,
   getRolePermissionIds, assignRolePermissions,
-  getPermissionTree, getServiceList
+  getAssignablePermissions, getServiceList
 } from '@/api'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -174,10 +179,10 @@ const permissionTreeRef = ref(null)
 const tableData = ref([])
 const serviceList = ref([])
 const allPermissionTree = ref([])
-const filterServiceId = ref(null)
 const filterPermissionType = ref(null)
 const checkedPermissionIds = ref([])
 const currentRoleId = ref(null)
+const currentRoleServiceId = ref(null)
 
 const searchForm = reactive({
   roleName: '',
@@ -195,6 +200,7 @@ const form = reactive({
   id: null,
   roleCode: '',
   roleName: '',
+  serviceId: null,
   roleType: 'function',
   status: 1,
   description: ''
@@ -206,6 +212,9 @@ const rules = {
   ],
   roleName: [
     { required: true, message: '请输入角色名称', trigger: 'blur' }
+  ],
+  serviceId: [
+    { required: true, message: '请选择关联服务', trigger: 'change' }
   ],
   roleType: [
     { required: true, message: '请选择角色类型', trigger: 'change' }
@@ -219,19 +228,31 @@ const treeProps = {
 
 const dialogTitle = ref('新增角色')
 
+const currentRoleServiceName = computed(() => {
+  const service = serviceList.value.find(s => s.id === currentRoleServiceId.value)
+  return service?.serviceName || '-'
+})
+
+const isCurrentUserAdmin = computed(() => {
+  return userStore.userInfo?.isAdmin === 1
+})
+
 const filteredPermissionTree = computed(() => {
   let data = JSON.parse(JSON.stringify(allPermissionTree.value || []))
   
-  if (filterServiceId.value || filterPermissionType.value) {
+  if (filterPermissionType.value) {
     data = data.filter(item => {
-      const matchService = filterServiceId.value ? item.serviceId === filterServiceId.value : true
-      const matchType = filterPermissionType.value ? item.permissionType === filterPermissionType.value : true
-      return matchService && matchType
+      return item.permissionType === filterPermissionType.value
     })
   }
   
   return data
 })
+
+const getServiceName = (serviceId) => {
+  const service = serviceList.value.find(s => s.id === serviceId)
+  return service?.serviceName || '-'
+}
 
 const loadServices = async () => {
   try {
@@ -239,15 +260,6 @@ const loadServices = async () => {
     serviceList.value = res.data || []
   } catch (e) {
     console.error('加载服务列表失败', e)
-  }
-}
-
-const loadPermissions = async () => {
-  try {
-    const res = await getPermissionTree({})
-    allPermissionTree.value = res.data || []
-  } catch (e) {
-    console.error('加载权限列表失败', e)
   }
 }
 
@@ -288,6 +300,7 @@ const handleAdd = () => {
   form.id = null
   form.roleCode = ''
   form.roleName = ''
+  form.serviceId = null
   form.roleType = 'function'
   form.status = 1
   form.description = ''
@@ -300,6 +313,7 @@ const handleEdit = (row) => {
   form.id = row.id
   form.roleCode = row.roleCode
   form.roleName = row.roleName
+  form.serviceId = row.serviceId
   form.roleType = row.roleType
   form.status = row.status
   form.description = row.description
@@ -316,9 +330,41 @@ const handleDelete = (row) => {
   }).catch(() => {})
 }
 
+const loadAssignablePermissions = async () => {
+  try {
+    const res = await getAssignablePermissions(currentRoleId.value)
+    allPermissionTree.value = buildTree(res.data || [])
+  } catch (e) {
+    console.error('加载可分配权限失败', e)
+    allPermissionTree.value = []
+  }
+}
+
+const buildTree = (permissions) => {
+  if (!permissions || permissions.length === 0) return []
+  
+  const map = {}
+  const roots = []
+  
+  permissions.forEach(p => {
+    map[p.id] = { ...p, children: [] }
+  })
+  
+  permissions.forEach(p => {
+    const node = map[p.id]
+    if (p.parentId && p.parentId !== 0 && map[p.parentId]) {
+      map[p.parentId].children.push(node)
+    } else {
+      roots.push(node)
+    }
+  })
+  
+  return roots
+}
+
 const handleAssignPermission = async (row) => {
   currentRoleId.value = row.id
-  filterServiceId.value = null
+  currentRoleServiceId.value = row.serviceId
   filterPermissionType.value = null
   
   try {
@@ -327,6 +373,8 @@ const handleAssignPermission = async (row) => {
   } catch (e) {
     checkedPermissionIds.value = []
   }
+  
+  await loadAssignablePermissions()
   
   permissionDialogVisible.value = true
 }
@@ -372,6 +420,5 @@ const handleSubmit = async () => {
 onMounted(() => {
   loadData()
   loadServices()
-  loadPermissions()
 })
 </script>

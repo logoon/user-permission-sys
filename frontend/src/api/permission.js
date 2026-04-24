@@ -4,8 +4,16 @@ export function getPermissionList(params) {
   return request.get('/permissions/list', { params })
 }
 
+export function getPermissionListByUser(params) {
+  return request.get('/permissions/list-by-user', { params })
+}
+
 export function getPermissionTree(params) {
   return request.get('/permissions/tree', { params })
+}
+
+export function getPermissionTreeByUser(params) {
+  return request.get('/permissions/tree-by-user', { params })
 }
 
 export function getPermissionById(id) {

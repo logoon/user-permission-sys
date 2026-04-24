@@ -23,11 +23,29 @@ public class PermissionController {
         return Result.success(permissions);
     }
 
+    @GetMapping("/list-by-user")
+    public Result<List<Permission>> listByUser(
+            @RequestAttribute("userId") Long userId,
+            @RequestParam(required = false) Long serviceId,
+            @RequestParam(required = false) String permissionType) {
+        List<Permission> permissions = permissionService.listByUser(userId, serviceId, permissionType);
+        return Result.success(permissions);
+    }
+
     @GetMapping("/tree")
     public Result<List<Permission>> tree(
             @RequestParam(required = false) Long serviceId,
             @RequestParam(required = false) String permissionType) {
         List<Permission> tree = permissionService.tree(serviceId, permissionType);
+        return Result.success(tree);
+    }
+
+    @GetMapping("/tree-by-user")
+    public Result<List<Permission>> treeByUser(
+            @RequestAttribute("userId") Long userId,
+            @RequestParam(required = false) Long serviceId,
+            @RequestParam(required = false) String permissionType) {
+        List<Permission> tree = permissionService.treeByUser(userId, serviceId, permissionType);
         return Result.success(tree);
     }
 
