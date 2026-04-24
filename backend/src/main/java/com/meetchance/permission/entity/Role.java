@@ -17,6 +17,8 @@ public class Role {
     
     private String roleType;
     
+    private Long serviceId;
+    
     private String description;
     
     private Integer status;

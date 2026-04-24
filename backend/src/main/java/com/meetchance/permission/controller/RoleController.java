@@ -34,6 +34,12 @@ public class RoleController {
         return Result.success(roles);
     }
 
+    @GetMapping("/list-by-service")
+    public Result<List<Role>> listByService(@RequestParam(required = false) Long serviceId) {
+        List<Role> roles = roleService.listByService(serviceId);
+        return Result.success(roles);
+    }
+
     @GetMapping("/{id}")
     public Result<Role> getById(@PathVariable Long id) {
         Role role = roleService.getById(id);
@@ -68,6 +74,12 @@ public class RoleController {
     public Result<List<Long>> getRolePermissionIds(@PathVariable Long roleId) {
         List<Long> permissionIds = roleService.getRolePermissionIds(roleId);
         return Result.success(permissionIds);
+    }
+
+    @GetMapping("/{roleId}/assignable-permissions")
+    public Result<List<Permission>> getAssignablePermissions(@PathVariable Long roleId) {
+        List<Permission> permissions = roleService.getAssignablePermissions(roleId);
+        return Result.success(permissions);
     }
 
     @PostMapping("/{roleId}/assign-permissions")

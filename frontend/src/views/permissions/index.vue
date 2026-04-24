@@ -167,7 +167,10 @@
 <script setup>
 import { reactive, ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getPermissionTree, createPermission, updatePermission, deletePermission, getServiceList } from '@/api'
+import { getPermissionTree, getPermissionTreeByUser, createPermission, updatePermission, deletePermission, getServiceList } from '@/api'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const currentServiceId = ref(null)
 const currentPermissionType = ref(null)
@@ -224,9 +227,18 @@ const loadServices = async () => {
   }
 }
 
+const isCurrentUserAdmin = computed(() => {
+  return userStore.userInfo?.isAdmin === 1
+})
+
 const loadData = async () => {
   loading.value = true
   try {
+    if (!currentServiceId.value) {
+      treeData.value = []
+      return
+    }
+    
     const params = {}
     if (currentServiceId.value) {
       params.serviceId = currentServiceId.value
@@ -234,7 +246,13 @@ const loadData = async () => {
     if (currentPermissionType.value) {
       params.permissionType = currentPermissionType.value
     }
-    const res = await getPermissionTree(params)
+    
+    let res
+    if (isCurrentUserAdmin.value) {
+      res = await getPermissionTree(params)
+    } else {
+      res = await getPermissionTreeByUser(params)
+    }
     treeData.value = res.data || []
   } catch (e) {
     console.error('加载数据失败', e)

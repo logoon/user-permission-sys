@@ -43,6 +43,13 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="isAdmin" label="管理员" width="100">
+        <template #default="{ row }">
+          <el-tag :type="row.isAdmin === 1 ? 'success' : 'info'">
+            {{ row.isAdmin === 1 ? '是' : '否' }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="createTime" label="创建时间" width="180" />
       <el-table-column label="操作" width="240" fixed="right">
         <template #default="{ row }">
@@ -93,6 +100,12 @@
           <el-radio-group v-model="form.status">
             <el-radio :value="1">启用</el-radio>
             <el-radio :value="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="是否管理员" prop="isAdmin">
+          <el-radio-group v-model="form.isAdmin">
+            <el-radio :value="1">是</el-radio>
+            <el-radio :value="0">否</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -169,7 +182,8 @@ const form = reactive({
   nickname: '',
   email: '',
   phone: '',
-  status: 1
+  status: 1,
+  isAdmin: 0
 })
 
 const rules = {
@@ -233,6 +247,7 @@ const handleAdd = () => {
   form.email = ''
   form.phone = ''
   form.status = 1
+  form.isAdmin = 0
   dialogVisible.value = true
 }
 
@@ -246,6 +261,7 @@ const handleEdit = (row) => {
   form.email = row.email
   form.phone = row.phone
   form.status = row.status
+  form.isAdmin = row.isAdmin === 1 ? 1 : 0
   dialogVisible.value = true
 }
 
