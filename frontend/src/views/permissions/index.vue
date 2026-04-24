@@ -116,11 +116,13 @@
             v-model="form.parentId"
             :data="treeData"
             :props="treeProps"
+            node-key="id"
             check-strictly
             placeholder="请选择上级权限（不选则为一级权限）"
             style="width: 100%"
             :disabled="isEdit"
             clearable
+            :default-expand-all="true"
           />
         </el-form-item>
         <el-form-item label="权限编码" prop="permissionCode">
@@ -131,15 +133,15 @@
         </el-form-item>
         <el-form-item label="权限类型" prop="permissionType">
           <el-radio-group v-model="form.permissionType">
-            <el-radio value="function">功能权限</el-radio>
-            <el-radio value="data">数据权限</el-radio>
+            <el-radio :value="'function'">功能权限</el-radio>
+            <el-radio :value="'data'">数据权限</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="资源类型" prop="resourceType">
           <el-select v-model="form.resourceType" placeholder="请选择资源类型" clearable style="width: 100%">
-            <el-option label="菜单" value="menu" />
-            <el-option label="按钮" value="button" />
-            <el-option label="接口" value="api" />
+            <el-option label="菜单" :value="'menu'" />
+            <el-option label="按钮" :value="'button'" />
+            <el-option label="接口" :value="'api'" />
           </el-select>
         </el-form-item>
         <el-form-item label="资源路径" prop="resourcePath">
