@@ -13,8 +13,8 @@
       </el-form-item>
       <el-form-item label="角色类型" class="search-form-item">
         <el-select v-model="searchForm.roleType" placeholder="请选择角色类型" clearable>
-          <el-option label="功能角色" value="function" />
-          <el-option label="数据角色" value="data" />
+          <el-option label="功能角色" :value="'function'" />
+          <el-option label="数据角色" :value="'data'" />
         </el-select>
       </el-form-item>
       <el-form-item label="状态" class="search-form-item">
@@ -82,8 +82,8 @@
         </el-form-item>
         <el-form-item label="角色类型" prop="roleType">
           <el-radio-group v-model="form.roleType">
-            <el-radio value="function">功能角色</el-radio>
-            <el-radio value="data">数据角色</el-radio>
+            <el-radio :value="'function'">功能角色</el-radio>
+            <el-radio :value="'data'">数据角色</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="状态" prop="status">
